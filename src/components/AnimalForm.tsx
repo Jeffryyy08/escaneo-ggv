@@ -170,11 +170,14 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
 
     const result = await saveAnimal(fd)
 
-    if (onCreated && !form.id) {
+    // Si hay callback, úsalo también para modo edición.
+    if (onCreated) {
       onCreated(result)
-    } else {
-      router.push('/animals')
+      return
     }
+
+    // Fallback: inventario.
+    router.push('/animals')
   }
 
   return (
