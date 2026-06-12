@@ -1,12 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AnimalForm from '@/components/AnimalForm'
 import QRGenerator from '@/components/QRGenerator'
 import { CheckCircle, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-export default function NewAnimalPage() {
+function NewAnimalForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const qrFromUrl = searchParams.get('qr') || ''
@@ -33,7 +33,6 @@ export default function NewAnimalPage() {
     created_at: new Date()
   } as any : null
 
-  // ✅ Vista de éxito después de registrar
   if (createdAnimal) {
     return (
       <div className="min-h-screen bg-[#FEFAE0] flex items-center justify-center p-6">
@@ -77,10 +76,8 @@ export default function NewAnimalPage() {
     )
   }
 
-  // ✅ Vista del formulario
   return (
     <div className="min-h-screen bg-[#FEFAE0]">
-      {/* Navbar */}
       <nav className="bg-white/80 backdrop-blur-sm border-b border-[#1B4332]/10 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <Link href="/animals" className="flex items-center gap-2 text-[#1B4332] font-bold hover:text-[#2D6A4F] transition-colors">
@@ -95,5 +92,17 @@ export default function NewAnimalPage() {
         <AnimalForm initialData={initialData} onCreated={handleAnimalCreated} />
       </main>
     </div>
+  )
+}
+
+export default function NewAnimalPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FEFAE0] flex items-center justify-center">
+        <p className="text-[#2D6A4F] font-bold text-lg">Cargando...</p>
+      </div>
+    }>
+      <NewAnimalForm />
+    </Suspense>
   )
 }
