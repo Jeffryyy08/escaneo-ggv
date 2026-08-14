@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { Pencil, Trash2, ArrowLeft, Calendar, Scale, Pill, Baby, Tag, MapPin, Droplet } from 'lucide-react'
 import { deleteAnimal } from '@/app/actions'
 import DeleteButton from '@/components/DeleteButton'
+import AnimalImage from '@/components/AnimalImage'
 
 // 🔹 Helper: Imagen por defecto según especie
 const getDefaultImageBySpecies = (species: string): string => {
@@ -20,7 +21,7 @@ const getDefaultImageBySpecies = (species: string): string => {
 export default async function AnimalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: rawId } = await params
   const id = decodeURIComponent(rawId)
-  
+
   const animal = await prisma.animal.findFirst({
     where: { OR: [{ id }, { qr_code: id }] }
   })
@@ -84,7 +85,7 @@ export default async function AnimalPage({ params }: { params: Promise<{ id: str
       </nav>
 
       <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-        
+
         {/* Tarjeta Principal con Imagen */}
         <div className="bg-white rounded-3xl shadow-sm border border-[#1B4332]/10 overflow-hidden">
           <div className="bg-gradient-to-r from-[#1B4332] to-[#2D6A4F] p-8 text-white relative">
@@ -95,15 +96,15 @@ export default async function AnimalPage({ params }: { params: Promise<{ id: str
               {/* Imagen del animal */}
               <div className="flex-shrink-0">
                 <div className="w-32 h-32 md:w-40 md:h-40 bg-white/20 rounded-2xl overflow-hidden border-4 border-white/30 shadow-lg">
-                  <img 
-                    src={animalImage} 
-                    alt={animal.name || animal.species} 
+                  <AnimalImage
+                    src={animalImage}
+                    alt={animal.name || animal.species}
+                    species={animal.species}
                     className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).src = getDefaultImageBySpecies(animal.species) }}
                   />
                 </div>
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2 opacity-90">
                   <Tag size={16} />
@@ -114,7 +115,7 @@ export default async function AnimalPage({ params }: { params: Promise<{ id: str
                   ID: {animal.qr_code}
                 </p>
               </div>
-              
+
               <div className="flex flex-col items-end gap-2">
                 <p className="text-sm opacity-80">Registrado el</p>
                 <p className="font-bold text-lg">{formatDate(animal.created_at)}</p>
