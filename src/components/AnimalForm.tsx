@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveAnimal } from '@/app/actions'
-import { Plus, Trash2, Save, X, Tag, Calendar, Baby } from 'lucide-react'
+import { Plus, Trash2, Save, X, Tag, Calendar, Baby, Camera, Droplet } from 'lucide-react'
 import type { Animal } from '@prisma/client'
 
 interface Props {
@@ -10,8 +10,19 @@ interface Props {
   onCreated?: (animalData: { qr_code: string; name?: string | null }) => void
 }
 
-// 🔹 Componentes auxiliares (DEFINIDOS FUERA para evitar pérdida de foco)
+// 🔹 Helper: Imagen por defecto según especie
+const getDefaultImageBySpecies = (species: string): string => {
+  const images: Record<string, string> = {
+    cabra: '/animals/default-cabra.jpg',
+    cerdo: '/animals/default-cerdo.webp',
+    ternero: '/animals/default-ternero.jpg',
+    oveja: '/animals/default-oveja.webp',
+    otro: '/animals/default-otro.png'
+  }
+  return images[species] || '/animals/default-otro.png'
+}
 
+// 🔹 Componentes auxiliares
 function InputField({ label, required, ...props }: { label: string; required?: boolean } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-1.5">
@@ -120,9 +131,98 @@ function RecordSection({
   )
 }
 
+// 🔹 Componente de subida de imagen (con especie)
+function ImageUpload({ 
+  value, 
+  onChange, 
+  species 
+}: { 
+  value: string
+  onChange: (url: string) => void
+  species: string
+}) {
+  const [preview, setPreview] = useState(value || getDefaultImageBySpecies(species))
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!value) {
+      setPreview(getDefaultImageBySpecies(species))
+    }
+  }, [species, value])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const result = reader.result as string
+        setPreview(result)
+        onChange(result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleRemove = () => {
+    const defaultForSpecies = getDefaultImageBySpecies(species)
+    setPreview(defaultForSpecies)
+    onChange('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-bold text-[#1B4332]">Foto del Animal</label>
+      
+      <div className="flex items-center gap-4">
+        <div className="relative w-24 h-24 bg-[#FEFAE0] rounded-xl border-2 border-[#1B4332]/20 overflow-hidden flex items-center justify-center">
+          <img 
+            src={preview} 
+            alt="Preview" 
+            className="w-full h-full object-cover"
+            onError={(e) => { 
+              (e.target as HTMLImageElement).src = getDefaultImageBySpecies(species)
+            }}
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+              title="Quitar imagen"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-4 py-2 bg-[#FEFAE0] text-[#1B4332] rounded-lg font-medium hover:bg-[#2D6A4F] hover:text-white transition-all border border-[#1B4332]/20"
+          >
+            <Camera size={16} />
+            {value ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <p className="text-xs text-[#2D6A4F]/50">JPG, PNG (máx. 2MB)</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // 🔹 Componente Principal
 export default function AnimalForm({ initialData, onCreated }: Props) {
   const router = useRouter()
+  
   const [form, setForm] = useState({
     id: initialData?.id || '',
     qr_code: initialData?.qr_code || '',
@@ -131,11 +231,13 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
     birth_date: initialData?.birth_date ? new Date(initialData.birth_date).toISOString().split('T')[0] : '',
     parent_father: initialData?.parent_father || '',
     parent_mother: initialData?.parent_mother || '',
+    image_url: initialData?.image_url || '',
     medications: initialData?.medications || [],
     pregnancies: initialData?.pregnancies || [],
     lactation_periods: initialData?.lactation_periods || [],
     offspring: initialData?.offspring || [],
-    weight_records: initialData?.weight_records || []
+    weight_records: initialData?.weight_records || [],
+    milk_records: initialData?.milk_records || []
   })
 
   const addRow = (field: keyof typeof form) => {
@@ -162,28 +264,27 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
     fd.set('birth_date', form.birth_date || '')
     fd.set('parent_father', form.parent_father)
     fd.set('parent_mother', form.parent_mother)
+    fd.set('image_url', form.image_url || getDefaultImageBySpecies(form.species))
     fd.set('medications', JSON.stringify(form.medications))
     fd.set('pregnancies', JSON.stringify(form.pregnancies))
     fd.set('lactation_periods', JSON.stringify(form.lactation_periods))
     fd.set('offspring', JSON.stringify(form.offspring))
     fd.set('weight_records', JSON.stringify(form.weight_records))
+    fd.set('milk_records', JSON.stringify(form.milk_records))
 
     const result = await saveAnimal(fd)
 
-    // Si hay callback, úsalo también para modo edición.
     if (onCreated) {
       onCreated(result)
       return
     }
-
-    // Fallback: inventario.
     router.push('/animals')
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl border border-[#1B4332]/10 overflow-hidden">
       
-      {/* Header del Formulario */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-[#1B4332] to-[#2D6A4F] p-6 md:p-8 text-white">
         <h2 className="text-2xl md:text-3xl font-extrabold mb-2">
           {form.id ? '✏️ Editar Animal' : '🐾 Registrar Nuevo Animal'}
@@ -195,7 +296,7 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
 
       <div className="p-6 md:p-8 space-y-8">
         
-        {/* Sección 1: Información Básica */}
+        {/* Sección 1: Imagen + Información Básica */}
         <section>
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-[#FEFAE0] rounded-xl flex items-center justify-center text-[#1B4332] font-bold border border-[#1B4332]/10">
@@ -205,13 +306,21 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2">
+              <ImageUpload 
+                value={form.image_url} 
+                onChange={(url) => setForm({ ...form, image_url: url })}
+                species={form.species}
+              />
+            </div>
+
             <InputField
               label="Código QR del Arete"
               placeholder="Ej: GGV-CAB-001"
               value={form.qr_code}
               onChange={(e) => setForm({ ...form, qr_code: e.target.value })}
               required
-              disabled={!!form.id} // No editar QR si ya existe
+              disabled={!!form.id}
             />
             <SelectField
               label="Especie"
@@ -287,10 +396,21 @@ export default function AnimalForm({ initialData, onCreated }: Props) {
               updateRow={updateRow}
               removeRow={removeRow}
             />
+            {/* ✅ NUEVO: Pesajes de Leche */}
+            <RecordSection
+              title="Pesajes de Leche"
+              icon={<span className="text-[#BC6C25]"><Droplet size={16} /></span>}
+              field="milk_records"
+              placeholder2="Litros producidos, observaciones"
+              form={form}
+              addRow={addRow}
+              updateRow={updateRow}
+              removeRow={removeRow}
+            />
           </div>
         </section>
 
-        {/* Botones de Acción */}
+        {/* Botones */}
         <div className="flex flex-col-reverse sm:flex-row gap-4 pt-6 border-t border-[#1B4332]/10">
           <button
             type="button"

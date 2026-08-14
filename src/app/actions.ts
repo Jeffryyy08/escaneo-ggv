@@ -1,7 +1,6 @@
 'use server'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 export async function saveAnimal(formData: FormData) {
   const id = formData.get('id') as string | null
@@ -14,11 +13,13 @@ export async function saveAnimal(formData: FormData) {
     birth_date: birthDateStr ? new Date(birthDateStr) : null,
     parent_father: (formData.get('parent_father') as string) || null,
     parent_mother: (formData.get('parent_mother') as string) || null,
+    image_url: (formData.get('image_url') as string) || null,
     medications: JSON.parse(formData.get('medications') as string || '[]'),
     pregnancies: JSON.parse(formData.get('pregnancies') as string || '[]'),
     lactation_periods: JSON.parse(formData.get('lactation_periods') as string || '[]'),
     offspring: JSON.parse(formData.get('offspring') as string || '[]'),
     weight_records: JSON.parse(formData.get('weight_records') as string || '[]'),
+    milk_records: JSON.parse(formData.get('milk_records') as string || '[]'),
   }
 
   let animal
@@ -30,7 +31,6 @@ export async function saveAnimal(formData: FormData) {
 
   revalidatePath('/animals')
   
-  // Devolvemos el animal creado/actualizado
   return {
     qr_code: animal.qr_code,
     name: animal.name

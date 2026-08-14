@@ -15,13 +15,15 @@ model Animal {
   birth_date         DateTime?
   parent_father      String?  @db.VarChar(255)
   parent_mother      String?  @db.VarChar(255)
+  image_url          String?  @db.VarChar(500)
   medications        Json     @default("[]")
   pregnancies        Json     @default("[]")
   lactation_periods  Json     @default("[]")
   offspring          Json     @default("[]")
   weight_records     Json     @default("[]")
+  milk_records       Json     @default("[]")
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
-  @@map("animals")
+  @@map("Animal")
 }
