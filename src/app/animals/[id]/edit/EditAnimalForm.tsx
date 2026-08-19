@@ -20,7 +20,8 @@ export default function EditAnimalForm({ animal }: Props) {
   const initialData = {
     ...animal,
     birth_date: animal.birth_date ? new Date(animal.birth_date) : null,
-    created_at: animal.created_at ? new Date(animal.created_at) : null,
+    created_at: new Date(animal.created_at ?? Date.now()),
+
 
   }
 
