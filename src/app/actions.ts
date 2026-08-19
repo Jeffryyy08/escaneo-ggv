@@ -1,7 +1,7 @@
 'use server'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-
+import { animalLookupWhere } from '@/lib/animal-lookup'
 export async function saveAnimal(formData: FormData) {
   const id = formData.get('id') as string | null
   const birthDateStr = formData.get('birth_date') as string
@@ -41,4 +41,14 @@ export async function deleteAnimal(formData: FormData) {
   const id = formData.get('id') as string
   await prisma.animal.delete({ where: { id } })
   revalidatePath('/animals')
+}
+
+export async function resolveAnimalId(identifier: string): Promise<string | null> {
+  const id = decodeURIComponent(identifier.trim())
+
+  const animal = await prisma.animal.findFirst({
+    where: animalLookupWhere(id),
+    select: { id: true },
+  })
+  return animal?.id ?? null
 }

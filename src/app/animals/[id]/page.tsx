@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import { animalLookupWhere } from '@/lib/animal-lookup'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { Pencil, Trash2, ArrowLeft, Calendar, Scale, Pill, Baby, Tag, MapPin, Droplet } from 'lucide-react'
 import { deleteAnimal } from '@/app/actions'
 import DeleteButton from '@/components/DeleteButton'
@@ -23,8 +24,12 @@ export default async function AnimalPage({ params }: { params: Promise<{ id: str
   const id = decodeURIComponent(rawId)
 
   const animal = await prisma.animal.findFirst({
-    where: { OR: [{ id }, { qr_code: id }] }
+    where: animalLookupWhere(id)
   })
+
+  if (animal && id !== animal.id) {
+    redirect(`/animals/${animal.id}`)
+  }
 
   if (!animal) {
     return (

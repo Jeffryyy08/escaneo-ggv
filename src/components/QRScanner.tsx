@@ -3,6 +3,21 @@ import { useEffect, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Camera, X } from 'lucide-react'
+import { resolveAnimalId } from '@/app/actions'
+
+function extractAnimalIdentifier(decodedText: string): string {
+  const trimmed = decodedText.trim()
+
+  try {
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      const url = new URL(trimmed)
+      const match = url.pathname.match(/\/animals\/([^/]+)/)
+      if (match) return decodeURIComponent(match[1])
+    }
+  } catch {}
+
+  return trimmed
+}
 
 export default function QRScanner() {
   const [error, setError] = useState<string | null>(null)
@@ -56,9 +71,11 @@ export default function QRScanner() {
             qr.pause()
             
             // Pequeño delay para asegurar que la UI se actualice antes de irse
-            setTimeout(() => {
+            setTimeout(async () => {
               stopScanning(qr)
-              router.push(`/animals/${encodeURIComponent(decodedText)}`)
+              const identifier = extractAnimalIdentifier(decodedText)
+              const animalId = await resolveAnimalId(identifier)
+              router.push(animalId ? `/animals/${animalId}` : `/animals/${encodeURIComponent(identifier)}`)
             }, 500)
           },
           (errorMessage) => {
